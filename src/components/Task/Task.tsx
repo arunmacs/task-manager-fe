@@ -1,5 +1,4 @@
 import React from "react";
-// Assuming getStatusProps and getCategoryProps are available and return the Icon components and colors
 import { getStatusProps, getCategoryProps } from "../../utils/helper";
 import type { ITask } from "../../types.global";
 import { Edit2Icon, Trash2Icon } from "lucide-react";
@@ -30,78 +29,89 @@ const TaskCard: React.FC<TaskCardProps> = ({
   const StatusIcon = statusProps.Icon;
   const CategoryIcon = categoryProps.Icon;
 
-  const cardClasses = `
-    group p-4 bg-white rounded-xs shadow-sm transition duration-150 ease-in-out cursor-pointer flex
-    ${
-      isSelected
-        ? "border-2 border-blue-500/60"
-        : "border-2 border-transparent hover:border-slate-400"
-    }
-  `;
-
   const handleCheckboxClick = (e: React.ChangeEvent<HTMLInputElement>) => {
-    e.stopPropagation(); 
+    e.stopPropagation();
     task?._id && onToggleSelect(task._id);
   };
+
+  const cardClasses = `
+    group p-4 bg-white rounded-sm shadow-sm transition duration-300 ease-in-out cursor-pointer flex items-start 
+    ${
+      isSelected
+        ? "border-2 border-indigo-400 shadow-md"
+        : "border-2 border-transparent hover:border-slate-300"
+    }
+  `;
 
   return (
     <div className={cardClasses}>
       {/* Checkbox Column */}
-      <div className="mr-3">
+      <div className="mr-3 mt-1">
         <input
           type="checkbox"
           checked={isSelected}
           onChange={handleCheckboxClick}
-          className="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+          className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"
+          aria-label={`Select task: ${task.title}`}
         />
       </div>
 
-      {/* Main Content Area (Clickable for main action/detail view) */}
+      {/* Main Content Area */}
       <div onClick={onClick} className="grow min-w-0">
         <div className="flex justify-between items-center mb-3">
+          {/* Category Tag */}
           <span
-            className="px-2 py-0.5 text-xs font-semibold rounded-xs text-white flex items-center"
+            className="px-2.5 py-1 text-xs font-semibold rounded-full text-white flex items-center shadow-sm"
             style={{ backgroundColor: categoryProps.color }}
           >
-            <CategoryIcon className="mr-1" size={10} />
+            <CategoryIcon className="mr-1.5 w-3 h-3" />
             {categoryProps.text}
           </span>
 
+          {/* Status Icon */}
           <span style={{ color: statusProps.color }} title={statusProps.text}>
-            <StatusIcon size={16} />
+            <StatusIcon size={18} />
           </span>
         </div>
 
-        <h3 className="text-lg font-bold text-gray-800 mb-1">{task.title}</h3>
+        {/* Title and Description */}
+        <h3 className="text-lg font-bold text-gray-800 mb-1 leading-snug">
+          {task.title}
+        </h3>
         {task.description && (
           <p className="text-sm text-gray-500 mb-3 truncate">
             {task.description}
           </p>
         )}
 
+        {/* Due Date Info*/}
         <div
-          className={`text-xs text-gray-400 ${
-            isPastDue ? "text-red-500 font-medium" : ""
+          className={`text-xs text-gray-500 flex items-center gap-1 ${
+            isPastDue ? "text-red-600 font-semibold" : ""
           }`}
         >
-          Due Date:{"  "}📅{" "}
+          📅 Due:{" "}
           {dueDate
-            ? dueDate.toDateString() + " " + dueDate.toLocaleTimeString()
+            ? `${dueDate.toLocaleDateString()} ${dueDate.toLocaleTimeString(
+                [],
+                { hour: "2-digit", minute: "2-digit" }
+              )}`
             : "No due date"}
         </div>
       </div>
 
       {/* Action Buttons Column */}
-      <div className="flex flex-col justify-between items-center ml-4 gap-2">
+      <div className="flex flex-col items-center ml-4 gap-3">
         <button
           onClick={(e) => {
             e.stopPropagation();
             task?._id && handleDelete(task?._id);
           }}
-          className="p-1 rounded-sm border-2 border-transparent hover:border-red-500 text-red-400 hover:text-red-600 transition duration-150 focus:outline-none focus:ring-2 focus:ring-red-500"
+          className="p-2 rounded-full hover:bg-red-100 text-red-500 hover:text-red-700 transition duration-150 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
           title="Delete Task"
+          aria-label="Delete Task"
         >
-          <Trash2Icon className="w-5 h-5" />
+          <Trash2Icon className="w-4 h-4" />
         </button>
 
         <button
@@ -109,10 +119,11 @@ const TaskCard: React.FC<TaskCardProps> = ({
             e.stopPropagation();
             handleEdit(task);
           }}
-          className="p-1 rounded-sm border-2 border-transparent hover:border-slate-500 text-slate-400 hover:text-slate-600 transition duration-150 focus:outline-none focus:ring-2 focus:ring-slate-500"
+          className="p-2 rounded-full hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition duration-150 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-opacity-50"
           title="Edit Task"
+          aria-label="Edit Task"
         >
-          <Edit2Icon className="w-5 h-5" />
+          <Edit2Icon className="w-4 h-4" />
         </button>
       </div>
     </div>

@@ -5,10 +5,10 @@ import { useEffect, useState } from "react";
 import FormInput from "../common/FormInput";
 import FormTextArea from "../common/FormTextArea";
 import FormSelect from "../common/FormSelect";
+import FormDate from "../common/FormDate";
 import { TaskCategoryEnum, TaskStatusEnum } from "../../utils/constants";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { taskServices } from "../../lib/services/taskServices";
-import FormDate from "../common/FormDate";
 
 interface TaskModalProps {
   open: boolean;
@@ -20,42 +20,45 @@ const TaskModal: React.FC<TaskModalProps> = (props: TaskModalProps) => {
   const { open, task, onCancel } = props;
 
   const queryClient = useQueryClient();
-  const [formData, setFormData] = useState<Partial<ITask>>();
+  const [formData, setFormData] = useState<Partial<ITask>>({
+    category: TaskCategoryEnum.GENERAL,
+    status: TaskStatusEnum.PENDING,
+  });
 
   useEffect(() => {
-    if (task && task?._id) {
-      setFormData({ ...formData, ...task });
+    if (task && task._id) {
+      setFormData(task);
+    } else {
+      setFormData({
+        category: TaskCategoryEnum.GENERAL,
+        status: TaskStatusEnum.PENDING,
+      });
     }
   }, [task, open]);
 
   const newTaskMutation = useMutation({
-    mutationFn: async () => {
-      const payload = { ...formData };
-      await taskServices.createTask(payload);
-    },
+    mutationFn: async () => taskServices.createTask({ ...formData }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       onCancel();
     },
-    onError: () => {},
+    onError: (error) => console.error("Error creating task:", error),
   });
 
   const updateTaskMutation = useMutation({
     mutationFn: async () => {
-      if (task && task?._id) {
-        const payload = { ...formData };
-        await taskServices.updateTask(task?._id, payload);
+      if (task?._id) {
+        await taskServices.updateTask(task._id, { ...formData });
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       onCancel();
     },
-    onError: () => {},
+    onError: (error) => console.error("Error updating task:", error),
   });
 
   const handleInput = (value: any, field: string) => {
-    console.log(field, value, typeof value);
     setFormData((prevState) => ({ ...prevState, [field]: value }));
   };
 
@@ -68,87 +71,106 @@ const TaskModal: React.FC<TaskModalProps> = (props: TaskModalProps) => {
     }
   };
 
+  const isLoading = newTaskMutation.isPending || updateTaskMutation.isPending;
+  const submitButtonText = task?._id ? "Update Task" : "Create Task";
+  const modalTitle = task?._id ? "Edit Task" : "Create New Task";
+
   return (
     <>
       {open && (
         <>
-          <div className="fixed inset-0 bg-black/30 z-50 transition-opacity duration-200" />
+          {/* Backdrop Overlay */}
+          <div 
+            className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm transition-opacity duration-300"
+            onClick={onCancel}
+          />
+          
+          {/* Modal Sidebar */}
           <div
             className={`
-          fixed top-0 right-0 min-h-screen w-full md:w-96 bg-slate-200 z-50 shadow-2xl 
-          transform transition-transform duration-200 ease-in-out
-          ${open ? "translate-x-0" : "translate-x-full"}
-        `}
+              fixed top-0 right-0 h-full w-full xs:w-80 sm:w-96 bg-white z-50 shadow-2xl overflow-y-auto
+              transform transition-transform duration-300 ease-in-out
+              ${open ? "translate-x-0" : "translate-x-full"}
+            `}
           >
-            <div className="flex justify-between items-center border-b border-gray-500 p-4">
-              <h1 className="font-semibold text-xl">Create Task</h1>
+            {/* Modal Header */}
+            <div className="flex justify-between items-center border-b border-gray-200 p-4 sticky top-0 bg-white z-10">
+              <h1 className="font-semibold text-xl text-gray-800">{modalTitle}</h1>
               <button
                 onClick={onCancel}
-                className="p-1 rounded-xs bg-white border border-transparent hover:border-gray-500"
+                className="p-2 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition duration-150"
+                aria-label="Close modal"
               >
                 <XIcon className="w-5 h-5" />
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="p-4 space-y-4">
+            
+            {/* Form Body with consistent spacing */}
+            <form onSubmit={handleSubmit} className="p-6 space-y-5">
               <FormInput
                 required
                 label="Title"
                 field="title"
                 placeholder="Enter Task Title"
-                value={formData?.title}
+                value={formData?.title || ""}
                 handleChange={handleInput}
+                // Note: These classes are a hint for your FormInput component implementation
+                className="border border-gray-300 rounded-md focus:border-indigo-500 focus:ring-indigo-500" 
               />
               <FormTextArea
                 label="Description"
                 field="description"
                 placeholder="Enter Task Description"
-                value={formData?.description}
+                value={formData?.description || ""}
                 handleChange={handleInput}
+                className="border border-gray-300 rounded-md focus:border-indigo-500 focus:ring-indigo-500"
               />
               <FormDate
                 label="Due Date"
                 field="dueDate"
                 placeholder="Enter Task Due Date"
-                value={formData?.dueDate}
+                value={formData?.dueDate || undefined}
                 handleChange={handleInput}
+                className="border border-gray-300 rounded-md focus:border-indigo-500 focus:ring-indigo-500"
               />
               <FormSelect
                 label="Category"
                 field="category"
                 value={formData?.category || TaskCategoryEnum.GENERAL}
                 handleChange={handleInput}
-                options={Object.entries(TaskCategoryEnum).map(
-                  ([key, value]) => ({ label: key, value: value })
-                )}
+                options={Object.entries(TaskCategoryEnum).map(([key, value]) => ({ label: key, value: value }))}
+                className="border border-gray-300 rounded-md focus:border-indigo-500 focus:ring-indigo-500"
               />
-              {task?._id && <FormSelect
-                label="Status"
-                field="status"
-                value={formData?.status || TaskStatusEnum.PENDING}
-                handleChange={handleInput}
-                options={Object.entries(TaskStatusEnum).map(([key, value]) => ({
-                  label: key,
-                  value: value,
-                }))}
-              />}
-              <div className="flex justify-around items-center mt-8">
+              
+              {task?._id && (
+                <FormSelect
+                  label="Status"
+                  field="status"
+                  value={formData?.status || TaskStatusEnum.PENDING}
+                  handleChange={handleInput}
+                  options={Object.entries(TaskStatusEnum).map(([key, value]) => ({ label: key, value: value }))}
+                  className="border border-gray-300 rounded-md focus:border-indigo-500 focus:ring-indigo-500"
+                />
+              )}
+              
+              {/* Form Actions (Buttons) */}
+              <div className="flex justify-end gap-4 pt-6">
                 <button
                   type="button"
-                  className="py-2 px-4 bg-white border border-transparent hover:border-gray-500"
+                  className="py-2 px-4 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 transition duration-150 shadow-sm"
                   onClick={onCancel}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="py-2 px-4 bg-white border border-transparent hover:border-gray-500"
+                  disabled={isLoading}
+                  className="py-2 px-4 bg-indigo-600 text-white font-semibold rounded-md shadow-md hover:bg-indigo-700 transition duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  {newTaskMutation.isPending || updateTaskMutation.isPending ? (
+                  {isLoading ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : task && task._id ? (
-                    "Update"
                   ) : (
-                    "Create"
+                    submitButtonText
                   )}
                 </button>
               </div>
